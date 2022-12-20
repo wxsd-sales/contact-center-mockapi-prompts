@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+  <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <link rel="icon" type="image/png" href="static/img/favicon.ico" />
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+      <script src="https://kit.fontawesome.com/f4a0e6453b.js" crossorigin="anonymous"></script>
+      <title>{% block title %}CCPrompts{% end %}</title>
+      <style>
+          .column.is-centered {
+              display: flex;
+              justify-content: center;
+          }
+
+          .my-hero-fullheight {
+            height: calc(100vh - 72px)
+          }
+
+          .my-hero-fullheight-padded-top {
+            height: calc(100vh - 108px)
+          }
+
+          #hero-section {
+              border-radius: 6px;
+          }
+      </style>
+  </head>
+  <body>
+    <div id="header-box" class="columns is-centered has-background-info mt-0 mb-0">
+        <div class="column is-centered py-1">
+            <h1 id='main-title' class="title">CCPrompts</h1>
+        </div>
+    </div>
+    <div class="columns is-centered mb-0">
+        <section class="hero my-hero-fullheight">
+            <div class="hero-body">
+                <div class="columns">
+                    <div class="column is-centered">
+                        <div class="columns is-mobile">
+                            <div class="column pr-0">
+                                <input id="url-input" class="input" type="text" placeholder="mockapi url">
+                            </div>
+                            <div class="column is-narrow pl-0">
+                                <button id="enter" class="button is-info">
+                                    <span class="pb-1">Enter</span>
+                                    <!--<span class="icon">
+                                        <i class="far fa-envelope"></i>
+                                    </span>-->
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="columns">
+                    <div class="column">
+                        <div class="notification is-danger" id="response-notification" style="display:none;">
+                        </div>
+                        <div id="cards">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <div class="modal" id="main-modal">
+            <div class="modal-background"></div>
+            <div class="modal-card">
+              <header class="modal-card-head">
+                <p class="modal-card-title" id="modal-card-title">Modal title</p>
+                <button class="delete" aria-label="close"></button>
+              </header>
+              <section class="modal-card-body" id="modal-card-content">
+              </section>
+              <footer class="modal-card-foot">
+                <button class="button is-success" id='save'>Save changes</button>
+                <button class="button">Cancel</button>
+              </footer>
+            </div>
+          </div>
+    </div>
+  </body>
+  {% block scripts %}{% end %}
+  <script src="static/js/jquery-3.4.1.min.js"></script>
+  <script src="static/js/modal.js"></script>
+  <script type="text/javascript">
+
+    let lastUrl = "";
+
+    function appendKeyToModal(key, value, subkey){
+        let name = "";
+        if(subkey){
+            name = subkey;
+        }
+        $('#modal-card-content').append(
+            $('<div class="field has-addons">').append(
+                $('<p class="control">').append(
+                    $('<a class="button is-static">').css({"min-width":"115px"}).text(key+':')
+                ),
+                $('<p class="control">').append(
+                    $(`<input id="${key}" name="${name}" class="input" type="text" placeholder="${value}">`).val(value)
+                )
+            )
+        );
+    }
+
+    function appendGreetingsToModal(greetings){
+        $('#modal-card-content').append(
+            $('<h5 class="title is-5">Greetings:</h5>')
+        )
+        for(let gkey of Object.keys(greetings)){
+            appendKeyToModal(gkey, greetings[gkey], 'Greetings');
+        }
+    }
+
+    function showErrorNotification(functionName, jresp){
+        console.log(`${functionName} - returned ${jresp.code}`);
+        console.log(`${functionName} - returned ${jresp.reason}`);
+        $('#response-notification').removeClass("is-success");
+        $('#response-notification').addClass("is-danger");
+        $('#response-notification').text(jresp.reason);
+        $('#response-notification').show();
+    }
+
+    function showSuccessNotification(jresp){
+        $('#response-notification').removeClass("is-danger");
+        $('#response-notification').addClass("is-success");
+        $('#response-notification').text(jresp.data);
+        $('#response-notification').show();
+    }
+
+    function getMockAPIURL(url){
+        $.post('/command', JSON.stringify({command: "get_mockapi_url", url:url})).done(function (response) {
+            console.log(response);
+            let jresp = JSON.parse(response);
+            if(jresp.data){
+                lastUrl = url;
+                $('#response-notification').hide()
+                ccprompts = jresp.data;
+                for(let i of ccprompts){
+                    console.log('i:')
+                    console.log(i);
+                    $('#cards').append(
+                        $('<div class="card mb-1">').append(
+                            $('<header class="card-header">').append(
+                                $('<p class="card-header-title">').text(`ID:${i.id}, CCMode:${i.CCMode}, CCStatus:${i.CCStatus}`),
+                                $('<button class="card-header-icon" aria-label="more options">').append(
+                                    $('<span class="icon">').append(
+                                        $('<i class="fas fa-pen aria-hidden="true">')
+                                    )
+                                ).on('click', function(){
+                                    $('#modal-card-content').empty();
+                                    for(let key of Object.keys(i)){
+                                        if(key.toLowerCase() != "id" && key != "Greetings"){
+                                            appendKeyToModal(key, i[key]);
+                                        }
+                                    }
+                                    appendGreetingsToModal(i["Greetings"]);
+                                    //text(JSON.stringify(i));
+                                    $('#modal-card-title').text(`ID:${i.id}`);
+                                    $('#modal-card-title').attr("name", i.id);
+                                    $('#main-modal').addClass('is-active');
+                                })
+                            )
+                        )
+                    )
+                }
+            } else {
+                showErrorNotification('get_mockapi_url', jresp);
+            }
+        });
+    }
+
+    function putMockAPIURL(data){
+        $.post('/command', JSON.stringify({command: "put_mockapi_url", url:lastUrl, data:data})).done(function (response) {
+            console.log(response);
+            let jresp = JSON.parse(response);
+            if(jresp.data){
+                //$('#response-notification').hide()
+                showSuccessNotification(jresp)
+            } else {
+                showErrorNotification('put_mockapi_url', jresp);
+            }
+            resetCards();
+        });
+    }
+
+    function resetCards(){
+        $('#cards').empty();
+        getMockAPIURL($('#url-input').val());
+    }
+
+    $('document').ready(function() {
+        $('#enter').on('click', function() {
+            resetCards();
+        });
+
+        $('#save').on('click', function(){
+            console.log('save pressed');
+            let data = {"id":$('#modal-card-title').attr('name')};
+            let inputs = $("#modal-card-content").find("input");
+            for(let i of inputs){
+                if(i.name == ""){
+                    data[i.id] = i.value;
+                } else {
+                    if(!data[i.name]){ data[i.name] = {}; }
+                    data[i.name][i.id] = i.value;
+                }
+            }
+            console.log(data);
+            putMockAPIURL(data);
+        });
+    });
+
+
+  </script>
+</html>
