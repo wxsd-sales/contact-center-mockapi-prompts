@@ -3,6 +3,7 @@
 ############################################################
 #sudo docker build -t ccprompts .
 #sudo docker run -p 10031:10031 -i -t ccprompts
+#Change 10031 in both places on the above line to be the value of MY_APP_PORT in your .env file
 ###########################################################################
 
 FROM python:3.8.1
