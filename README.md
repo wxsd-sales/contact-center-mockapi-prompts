@@ -1,4 +1,4 @@
-# contact-center-mockapi-prompts (ccprompts)
+# Contact Center Mockapi Prompts (ccprompts)
 <a href="https://ccprompts.wbx.ninja/"><strong>View Demo</strong></a>
 ·
 <a href="https://github.com/WXSD-Sales/ccprompts/issues"><strong>Report Bug</strong></a>
